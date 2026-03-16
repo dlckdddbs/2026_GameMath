@@ -570,7 +570,7 @@ Transform:
   m_GameObject: {fileID: 578800779}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 1.06, z: 0}
+  m_LocalPosition: {x: 0, y: 1.06, z: 1.81}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -588,7 +588,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e3f534b33b391ba4c8a8de568ebd9311, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GameMath
-  moveSpeed: 5
+  moveSpeed: 1
 --- !u!114 &578800786
 MonoBehaviour:
   m_ObjectHideFlags: 0

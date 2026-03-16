@@ -1,15 +1,15 @@
+using TMPro;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
 public class GameMath : MonoBehaviour
 {
     public float moveSpeed = 5f;
-    //private Vector2 moveinput;
-    //Vector3 normalizedVector;
     private Vector2 mouseScreenPostion;
     private Vector3 targetPostion;
-    private bool isMoving = false;
-    
+    private bool Moving = false;
+    private bool Sprinting = false;
+    float currentSpeed;
     //public void OnMove(InputValue value)
     //{
     //    moveinput = value.Get <Vector2>();
@@ -33,51 +33,54 @@ public class GameMath : MonoBehaviour
 
                     targetPostion = hit.point;
                     targetPostion.y = transform.position.y;
-                    isMoving = true;
+                    Moving = true;
 
                     break;
                 }
             }
         }
 
-        // Update is called once per frame
-        void Update()
+
+        
+    }
+    public void OnSprint(InputValue value)
+    {
+        Sprinting = value.isPressed;
+    }
+
+    void Update()
+    {
+        if (Moving)
         {
-            if (isMoving)
+
+            Vector3 direction = targetPostion - transform.position;
+            float sqrMagnitude = direction.x * direction.x + direction.y * direction.y + direction.z * direction.z;
+            float magnitude = Mathf.Sqrt(sqrMagnitude);
+
+
+            if (magnitude > 0.01f)
             {
-                Vector3 ab = targetPostion - transform.position;
-
-                float a = (ab.x * ab.x) + (ab.y * ab.y) + (ab.z * ab.z);
-                float b = Mathf.Sqrt(a);
-                //targetPostion = ab / b;
-
-                if (b<0.05f)
+                Vector3 normalizedVector = direction / magnitude;
+                transform.Translate(normalizedVector * moveSpeed * Time.deltaTime);
+                if (Sprinting)
                 {
-                   isMoving = false;
-                    return;
+                    currentSpeed = moveSpeed * 10;
                 }
+                else
+                {
+                    currentSpeed = moveSpeed;
+                }
+               
 
-                Vector3 cc = ab / b;
-                transform.position += cc * 5 * Time.deltaTime;
-                
-                //transform.Translate(ab * 5 * Time.deltaTime);
-
+              
+                transform.Translate(normalizedVector * currentSpeed * Time.deltaTime);
             }
-
-            //Vector3 direction = new Vector3(moveinput.x,moveinput.y,0);
-            //float sqrMagnitude = direction.x * direction.x + direction.y * direction.y+ direction.z* direction.z;
-            //float magnitude = Mathf.Sqrt(sqrMagnitude);
-
-            //if (magnitude > 0)
-            //{
-            //    normalizedVector = direction / magnitude;
-            //}
-            //else
-            //    normalizedVector = Vector3.zero;
-            //    transform.Translate(direction * moveSpeed * Time.deltaTime);
-
-
-
+            else
+            {
+                Moving = false;
+            }
         }
+
+
     }
 }
