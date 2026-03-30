@@ -3,52 +3,102 @@ using UnityEngine.SceneManagement;
 
 public class Enemy : MonoBehaviour
 {
-    public Transform player;
-    public float viewDistance = 5f;
-    public float viewAngle = 90f;
-    public float moveSpeed = 2f;     // 이동 속도
-    public float rotationSpeed = 5f; // 회전 속도
+    public enum EnemyType { White, Yellow, Red }
+    public EnemyType type;
+
+    public Player playerScript;
+    public float moveSpeed = 3.0f;
+    public float parryDistance = 2.5f; 
+
+    private float viewDistance;
+    private float viewAngle;
+    private float rotationSpeed;
+    private bool isChasing = false;
+
+    void Start()
+    {
+        if (playerScript == null) playerScript = FindFirstObjectByType<Player>();
+
+        SetupStats();
+    }
+
+    void SetupStats()
+    {
+        switch (type)
+        {
+            case EnemyType.White:
+                viewAngle = 60f; rotationSpeed = 30f; viewDistance = 5f;
+                break;
+            case EnemyType.Yellow:
+                viewAngle = 90f; rotationSpeed = 45f; viewDistance = 8f;
+                break;
+            case EnemyType.Red:
+                viewAngle = 180f; rotationSpeed = 60f; viewDistance = 15f;
+                break;
+        }
+    }
 
     void Update()
     {
-       
-        if (player == null) return;
+        if (playerScript == null) return;
 
-        if (CheckPlayerInFOV())
+        float distance = Vector3.Distance(transform.position, playerScript.transform.position);
+
+        if (!isChasing && CheckPlayerInFOV(distance))
         {
-            Vector3 directionToPlayer = (player.position - transform.position).normalized;
-            Quaternion lookRotation = Quaternion.LookRotation(directionToPlayer);
-            transform.rotation = Quaternion.Slerp(transform.rotation, lookRotation, Time.deltaTime * rotationSpeed);
+            isChasing = true;
+        }
+
+        if (isChasing)
+        {
+            Vector3 dir = (playerScript.transform.position - transform.position).normalized;
+            dir.y = 0;
+            transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(dir), Time.deltaTime * 5f);
             transform.position += transform.forward * moveSpeed * Time.deltaTime;
+
+            if (distance <= parryDistance)
+            {
+                CheckParryMechanism();
+            }
         }
         else
         {
-            transform.Rotate(0, 45f * rotationSpeed * Time.deltaTime, 0);
+            transform.Rotate(0, rotationSpeed * Time.deltaTime, 0);
         }
-
     }
 
-    bool CheckPlayerInFOV()
+    bool CheckPlayerInFOV(float dist)
     {
-        float distance = Vector3.Distance(transform.position, player.position);
-        if (distance > viewDistance)
-            return false;
+        if (dist > viewDistance) return false;
 
-        Vector3 directionToPlayer = (player.position - transform.position).normalized;
-
-        float dotProduct = Vector3.Dot(transform.forward, directionToPlayer);
+        Vector3 dirToPlayer = (playerScript.transform.position - transform.position).normalized;
+        float dot = Vector3.Dot(transform.forward, dirToPlayer);
         float cosThreshold = Mathf.Cos((viewAngle * 0.5f) * Mathf.Deg2Rad);
 
-        return dotProduct >= cosThreshold;
+        return dot >= cosThreshold;
+    }
+
+    void CheckParryMechanism()
+    {
+        Vector3 playerForward = playerScript.transform.forward;
+        Vector3 dirToEnemy = (transform.position - playerScript.transform.position).normalized;
+        Vector3 cross = Vector3.Cross(playerForward, dirToEnemy);
+        bool enemyOnRight = cross.y > 0;
+        if (enemyOnRight && playerScript.isRightParrying)
+        {
+            Destroy(gameObject);
+        }
+        else if (!enemyOnRight && playerScript.isLeftParrying)
+        {
+            Destroy(gameObject);
+        }
     }
 
     private void OnCollisionEnter(Collision collision)
     {
         if (collision.gameObject.layer == LayerMask.NameToLayer("Player"))
         {
-            Debug.Log("충돌");
-            Destroy(collision.gameObject);
-            SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+            SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
         }
     }
 }
