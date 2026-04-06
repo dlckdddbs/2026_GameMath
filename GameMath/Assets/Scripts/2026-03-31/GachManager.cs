@@ -3,44 +3,58 @@ using UnityEngine;
 
 public class GachaManager : MonoBehaviour
 {
+    [Header("전리품 획득 확률")]
+    public float probNormal = 0.50f;
+    public float probAdvanced = 0.30f;
+    public float probRare = 0.15f;
+    public float probLegendary = 0.05f;
+
+    [Header("획득한 전리품 수량")]
+    public int countNormal = 0;
+    public int countAdvanced = 0;
+    public int countRare = 0;
+    public int countLegendary = 0;
 
 
-
-    public void SimulateGachaSingle()
+    public void DropLoot()
     {
+        float r = Random.value; // 0.0f ~ 1.0f
 
-        Debug.Log("Gacha Result: " + Simulate());
-    }
-
-    public void SimulateGachaTenTime()
-    {
-        List<string> results = new List<string>();
-        for (int i = 0; i < 9; i++)
+        if (r < probNormal)
         {
-            results.Add(Simulate());
+            countNormal++;
+            FailLegendary();
         }
-            // 10번째는 A 등급 이상으로 설정, 확률은 A : S를 2:1로 설정
-            float r2 = Random.value;
-            string result2 = string.Empty;
-            if (r2 < 2f / 3f) result2 = "A";
-            else result2 = "S";
-            results.Add(result2);
-
-            Debug.Log("Gacha Results: " + string.Join(", ", results));
-        
-
+        else if (r < probNormal + probAdvanced)
+        {
+            countAdvanced++;
+            FailLegendary();
+        }
+        else if (r < probNormal + probAdvanced + probRare)
+        {
+            countRare++;
+            FailLegendary();
+        }
+        else 
+        {
+            countLegendary++;
+            ResetLootProbabilities();
+        }
     }
 
-    string Simulate()
+    private void FailLegendary()
     {
-        float r = Random.value;
-        string result = string.Empty;
+        probLegendary += 0.015f;
+        probNormal -= 0.005f;
+        probAdvanced -= 0.005f;
+        probRare -= 0.005f;
+    }
 
-        if (r < 0.4f) result = "C";
-        else if (r < 0.7f) result = "B";
-        else if (r < 0.9f) result = "A";
-        else result = "S";
-
-        return result;
+    private void ResetLootProbabilities()
+    {
+        probNormal = 0.50f;
+        probAdvanced = 0.30f;
+        probRare = 0.15f;
+        probLegendary = 0.05f;
     }
 }
