@@ -1,6 +1,8 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
+using TMPro;
 
 public class TurnBasedGame : MonoBehaviour
 {
@@ -13,37 +15,79 @@ public class TurnBasedGame : MonoBehaviour
     [SerializeField] float critDamageRate = 2f;
     [SerializeField] int maxHitsPerTurn = 5;
 
+    public TextMeshProUGUI combatResultText; 
+    public TextMeshProUGUI itemResultText;  
+
     int turn = 0;
     bool rareItemObtained = false;
+    float currentRareChance = 0.2f;
 
     string[] rewards = { "Gold", "Weapon", "Armor", "Potion" };
 
+    int totalSpawnedEnemies = 0;
+    int totalKilledEnemies = 0;
+    int totalTryAttack = 0;
+    int totalHitAttack = 0;
+    int totalCritAttack = 0;
+    float maxDamage = 0f;
+    float minDamage = 9999f;
+
+    int countPotion = 0;
+    int countGold = 0;
+    int countNormalWeapon = 0;
+    int countRareWeapon = 0;
+    int countNormalArmor = 0;
+    int countRareArmor = 0;
+
     public void StartSimulation()
     {
-        // 기하분포 샘플링: 레어 아이템이 나올 때까지 반복하는 구조
         rareItemObtained = false;
         turn = 0;
+        currentRareChance = 0.2f;
+
+        totalSpawnedEnemies = 0;
+        totalKilledEnemies = 0;
+        totalTryAttack = 0;
+        totalHitAttack = 0;
+        totalCritAttack = 0;
+        maxDamage = 0f;
+        minDamage = 9999f;
+
+        countPotion = 0;
+        countGold = 0;
+        countNormalWeapon = 0;
+        countRareWeapon = 0;
+        countNormalArmor = 0;
+        countRareArmor = 0;
+
+        // 기하분포 샘플링: 레어 아이템이 나올 때까지 반복하는 구조
         while (!rareItemObtained)
         {
-            SimulateTurn();
             turn++;
+            SimulateTurn();
+
+            if (!rareItemObtained)
+            {
+                currentRareChance += 0.05f;
+            }
         }
 
-        Debug.Log($"레어 아이템 {turn} 턴에 획득");
+        UpdateUI();
     }
 
     void SimulateTurn()
     {
-        Debug.Log($"--- Turn {turn + 1} ---");
-
         // 푸아송 샘플링: 적 등장 수
         int enemyCount = SamplePoisson(poissonLambda);
-        Debug.Log($"적 등장 : {enemyCount}");
+        totalSpawnedEnemies += enemyCount;
 
         for (int i = 0; i < enemyCount; i++)
         {
             // 이항 샘플링: 명중 횟수
             int hits = SampleBinomial(maxHitsPerTurn, hitRate);
+            totalTryAttack += maxHitsPerTurn;
+            totalHitAttack += hits;
+
             float totalDamage = 0f;
 
             for (int j = 0; j < hits; j++)
@@ -54,34 +98,66 @@ public class TurnBasedGame : MonoBehaviour
                 if (Random.value < critChance)
                 {
                     damage *= critDamageRate;
-                    Debug.Log($" 크리티컬 hit! {damage:F1}");
+                    totalCritAttack++;
                 }
-                else
-                    Debug.Log($" 일반 hit! {damage:F1}");
+
+                if (damage > maxDamage) maxDamage = damage;
+                if (damage < minDamage) minDamage = damage;
 
                 totalDamage += damage;
             }
 
             if (totalDamage >= enemyHP)
             {
-                Debug.Log($"적 {i + 1} 처치! (데미지: {totalDamage:F1})");
+                totalKilledEnemies++;
 
                 // 균등 분포 샘플링: 보상 결정
                 string reward = rewards[UnityEngine.Random.Range(0, rewards.Length)];
-                Debug.Log($"보상: {reward}");
 
-                if (reward == "Weapon" && Random.value < 0.2f)
+                if (reward == "Weapon")
                 {
-                    rareItemObtained = true;
-                    Debug.Log("레어 무기 획득!");
+                    if (Random.value < currentRareChance)
+                    {
+                        rareItemObtained = true;
+                        countRareWeapon++;
+                    }
+                    else countNormalWeapon++;
                 }
-                else if (reward == "Armor" && Random.value < 0.2f)
+                else if (reward == "Armor")
                 {
-                    rareItemObtained = true;
-                    Debug.Log("레어 방어구 획득");
+                    if (Random.value < currentRareChance)
+                    {
+                        rareItemObtained = true;
+                        countRareArmor++;
+                    }
+                    else countNormalArmor++;
                 }
+                else if (reward == "Potion") countPotion++;
+                else if (reward == "Gold") countGold++;
             }
         }
+    }
+
+    void UpdateUI()
+    {
+        float hitPercent = (totalTryAttack > 0) ? ((float)totalHitAttack / totalTryAttack) * 100f : 0f;
+        float critPercent = (totalHitAttack > 0) ? ((float)totalCritAttack / totalHitAttack) * 100f : 0f;
+        if (minDamage == 9999f) minDamage = 0f;
+
+        combatResultText.text = $"총 진행 턴 수 : {turn}\n" +
+                                $"발생한 적 : {totalSpawnedEnemies}\n" +
+                                $"처치한 적 : {totalKilledEnemies}\n" +
+                                $"공격 명중 결과 : {hitPercent:F2}%\n" +
+                                $"발생한 치명타율 결과 : {critPercent:F2}%\n" +
+                                $"최대 데미지 : {maxDamage:F2}\n" +
+                                $"최소 데미지 : {minDamage:F2}";
+
+        itemResultText.text = $"포션 : {countPotion}개\n" +
+                              $"골드 : {countGold}개\n" +
+                              $"무기 - 일반 : {countNormalWeapon}개\n" +
+                              $"무기 - 레어 : {countRareWeapon}개\n" +
+                              $"방어구 - 일반 : {countNormalArmor}개\n" +
+                              $"방어구 - 레어 : {countRareArmor}개";
     }
 
     // --- 분포 샘플 함수들 ---
